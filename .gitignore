@@ -1,0 +1,31 @@
+﻿# Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Python
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Vector DB / generated data
+rag/chroma_db/
+rag/image_hashes.json
+
+# Node
+node_modules/
+dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
