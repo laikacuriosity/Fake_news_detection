@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TruthLens — Case File</title>
+<title>Aletheia — Case File</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -350,7 +350,7 @@
 </svg>
 
 <div class="masthead">
-  <div class="masthead-title">TRUTH<span>LENS</span> — CASE FILE</div>
+  <div class="masthead-title">Aletheia<span></span> — CASE FILE</div>
   <div class="case-number" id="caseNumber">FILE NO. ——<br/>STATUS: AWAITING SUBMISSION</div>
 </div>
 
@@ -362,11 +362,11 @@
     <label class="field-label">IMAGE URL (OPTIONAL)</label>
     <input type="text" id="imageInput" placeholder="https://example.com/photo.jpg" />
 
-    <label class="field-label">API ENDPOINT</label>
-    <input type="text" id="endpointInput" value="http://localhost:8000/verify" />
+    <label class="field-label" style="display: none;">API ENDPOINT</label>
+    <input type="text" id="endpointInput" value="http://localhost:8000/verify" style="display: none;"/>
 
     <button class="submit-btn" id="submitBtn">SUBMIT FOR REVIEW</button>
-    <div class="hint">Runs against your local TruthLens backend. If the request fails silently, enable CORS in app.py — see note below the form.</div>
+    <div class="hint">Runs against local Aletheia backend. If the request fails silently, enable CORS in app.py</div>
   </div>
 
   <div class="results" id="results">
@@ -375,6 +375,7 @@
 </div>
 
 <script>
+  const API_ENDPOINT = 'http://localhost:8000/verify';
   const submitBtn = document.getElementById('submitBtn');
   const results = document.getElementById('results');
   const caseNumber = document.getElementById('caseNumber');
@@ -506,7 +507,7 @@
 </script>
 
 <div class="footer">
-  <div class="footer-copyright">© 2026 TruthLens. For research and demonstration purposes only — not a substitute for professional fact-checking.</div>
+  <div class="footer-copyright">© 2026 Aletheia. For research and demonstration purposes only — not a substitute for professional fact-checking.</div>
   <div class="social-links">
     <a href="https://www.linkedin.com/in/jayasri0422" target="_blank" rel="noopener" aria-label="LinkedIn">
       <svg viewBox="0 0 24 24" width="16" height="16"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.41v1.56h.05c.48-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>

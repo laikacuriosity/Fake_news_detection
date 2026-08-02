@@ -19,8 +19,13 @@ General web evidence (secondary): {state.get("live_evidence")}
 {credibility_context}
 {image_context}
 
-Article to verify: {state["article"]}
+Article/claim to verify: {state["article"]}
+Your task: determine whether the SPECIFIC CLAIM made in the article is supported or contradicted by the evidence — not just whether the evidence is about a related, well-documented topic.
 
+Step through this explicitly:
+1. What exact claim does the article make?
+2. What do the trusted sources actually say about that specific claim — do they CONFIRM it or CONTRADICT it?
+3. If sources contradict the article's claim, the verdict is FAKE, even if the underlying topic (e.g. a real historical event) is well-documented elsewhere.
 Respond with exactly this JSON structure:
 {{
   "verdict": "FAKE" or "REAL" or "UNVERIFIED",
@@ -28,7 +33,7 @@ Respond with exactly this JSON structure:
   "reasoning": "2-3 sentence explanation"
 }}
 
-Prioritize higher-credibility sources. If evidence is empty or all sources are low-credibility, use "UNVERIFIED" rather than guessing."""
+If evidence is empty or all sources are low-credibility, use "UNVERIFIED" rather than guessing."""
 
     response = ollama.chat(
         model="llama3.1",

@@ -65,8 +65,10 @@ def ingest_all_feeds():
             results.append({"feed": name, "error": str(e)})
     return results
 
-def query_trusted_sources(query: str, n_results: int = 5):
-    """Query the trusted-source vector DB for relevant fact-checks."""
+def query_trusted_sources(query: str, n_results: int = 5, max_distance: float = 0.55):
+    """Query the trusted-source vector DB for relevant fact-checks.
+    max_distance filters out weak/irrelevant matches — ChromaDB always
+    returns its nearest neighbors even if none are actually relevant."""
     results = _collection.query(
         query_texts=[query],
         n_results=n_results
@@ -79,6 +81,8 @@ def query_trusted_sources(query: str, n_results: int = 5):
             results["metadatas"][0],
             results["distances"][0]
         ):
+            if dist > max_distance:
+                continue
             output.append({
                 "content": doc,
                 "title": meta.get("title"),

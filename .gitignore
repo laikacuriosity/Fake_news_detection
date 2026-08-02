@@ -14,7 +14,7 @@ __pycache__/
 *.egg-info/
 
 # Vector DB / generated data
-rag/chroma_db/
+backend/rag/chroma_db/
 rag/image_hashes.json
 
 # Node
