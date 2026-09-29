@@ -1,157 +1,81 @@
-# **`Fake News Detection using Langchain and Lang Graph`** : Aletheia
+# Aletheia — Fake News Detection using NLP
 
-An AI-assisted fake news and claim verification tool. Submit an article (and optionally an image), and Aletheia runs it through a multi-agent pipeline ; a style-based classifier, live web search, a curated trusted-source knowledge base, reverse image matching, and an LLM aggregator to return a verdict backed by evidence and source credibility scoring.
+Aletheia is an evidence-driven, multimodal news and claim verification system that combines transformer-based NLP, claim extraction, live web retrieval, trusted-source RAG, source credibility analysis, NLI-based evidence stance detection, image verification, and explainable verdict generation.
 
-## How it works
+## Features
 
-```
-Article + (optional) Image
-        │
-        ▼
-┌───────────────────────────────────────────┐
-│           LangGraph orchestration          │
-│                                             │
-│  Text Verifier ──▶ Image Verifier          │
-│       │                  │                 │
-│       ▼                  ▼                 │
-│  Fact-Check Retriever (live search + RAG)  │
-│       │                                    │
-│       ▼                                    │
-│  Source Credibility Scorer                 │
-│       │                                    │
-│       ▼                                    │
-│  Aggregator (LLM, structured JSON output)  │
-└───────────────────────────────────────────┘
-        │
-        ▼
-Verdict + Confidence + Reasoning + Evidence
-```
+- **Claim Extraction:** Extracts factual claims from articles instead of just using the first 200 characters.
+- **True Parallel Architecture:** Uses LangGraph for parallel execution of agents.
+- **Evidence Stance Detection (NLI):** Uses `cross-encoder` NLI to explicitly calculate if evidence SUPPORTS or CONTRADICTS a claim.
+- **Trusted-Source RAG:** Ingests full documents with metadata into ChromaDB.
+- **Multi-Factor Source Credibility:** Safely parses domain names and ranks credibility based on domain reputation.
+- **Multimodal Checking:** Supports perceptual hashing (pHash) for reverse image search.
+- **Explainable Verdicts:** Uses Llama 3.1 to summarize findings, giving a final verdict of REAL, FAKE, or UNVERIFIED with confidence levels.
 
-- **Text verifier** — a HuggingFace transformer classifier (style-based signal, logged for reference, not treated as the final verdict)
-- **Image verifier** — perceptual hashing (`imagehash`) against a self-built corpus of known/fact-checked images
-- **Fact-check retriever** — combines live DuckDuckGo search with a ChromaDB vector store of trusted fact-checking sources (FactCheck.org, Full Fact, TruthOrFiction, and manually ingested entries)
-- **Source credibility scorer** — ranks evidence by domain reputation and corpus provenance
-- **Aggregator** — a local LLM (via Ollama) that reasons over all gathered evidence and returns a structured verdict: `FAKE`, `REAL`, or `UNVERIFIED`
-
-Everything runs on free, open-source tooling.
-
-## Stack
-
-| Layer | Tech |
-|---|---|
-| Backend | FastAPI |
-| Orchestration | LangGraph |
-| Classifier | HuggingFace Transformers (`roberta-fake-news-classification`) |
-| Evidence search | `ddgs` (DuckDuckGo, free) |
-| Trusted-source RAG | ChromaDB + `sentence-transformers` |
-| Image matching | `imagehash` (perceptual hashing) |
-| LLM reasoning | Ollama (local, free: `llama3.1`) |
-| Frontend | Single-file HTML/CSS/JS |
-
-## Project structure
-
-```
-fake_news_detection/
-├── backend/
-│   ├── app.py
-│   ├── requirements.txt
-│   ├── .env                    # not committed, create one to hold your 'GOOGLE_API_KEY'
-│   ├── api/
-│   │   └── verify.py
-│   ├── services/
-│   │   ├── classifier.py
-│   │   ├── retriever.py
-│   │   ├── llm.py               # aggregator node
-│   │   ├── image_search.py
-│   │   ├── agent.py            # entry point
-│   │   ├── agents.py            # LangGraph agent nodes
-│   │   ├── graph.py             # graph definition
-│   │   └── graph_state.py
-│   └── rag/
-│       └── ingest.py
-├── frontend/
-│   └── index.html
-└── README.md
+## Architecture
+```mermaid
+graph TD
+    A[User Input] --> B(Input Preprocessor)
+    B --> C(Claim Extraction Agent)
+    B --> D(Text Analysis Agent)
+    B --> E(Image Verification Agent)
+    C --> F(Search & RAG Retriever Agent)
+    F --> G(Stance Detection Agent)
+    F --> H(Source Credibility Agent)
+    D --> I(Verdict Aggregator)
+    E --> I
+    G --> I
+    H --> I
+    I --> J[Final Verdict & Explanation]
 ```
 
-## Setup
+## Installation & Environment Setup
 
-**1. Install backend dependencies**
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/laikacuriosity/Fake_news_detection.git .
+   ```
+2. **Setup virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Or venv\Scripts\activate on Windows
+   ```
+3. **Install dependencies**
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+4. **Environment Variables**
+   Create a `.env` file in the root based on `.env.example`.
 
+## Running the Application
+
+### Backend
+Start the FastAPI server:
 ```bash
 cd backend
-pip install -r requirements.txt --break-system-packages
-```
-
-**2. Install and run Ollama (local LLM, free)**
-- Go to ollama.com/download
-- Click Download for Windows
-- Run the downloaded .exe installer like any normal Windows program
-
-```bash
-ollama pull llama3.1
-ollama serve
-```
-
-**3. Run the backend in another terminal**
-
-```bash
 uvicorn app:app --reload
 ```
 
-**4. Open the frontend**
-
-Open `frontend/index.html` directly in a browser, or serve it:
-
+### Frontend
+Since it's a static HTML file, simply open `frontend/index.html` in your browser. Or serve it via a simple HTTP server:
 ```bash
 cd frontend
-python -m http.server 5500
+python -m http.server 3000
 ```
 
-Then visit `http://localhost:5500`.
-
-## API reference
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/verify` | POST | Submit `{ "article": "...", "image_url": "..." }`, returns verdict, confidence, reasoning, evidence, and credibility scores |
-| `/rag/ingest-feeds` | POST | Pull recent entries from configured trusted-source RSS feeds into ChromaDB |
-| `/rag/ingest-manual` | POST | Add a single fact-check document manually |
-| `/rag/query` | GET | Debug: query the trusted-source vector store directly (`?q=...`) |
-
-## Example request
-
-```json
-POST /verify
-{
-  "article": "NASA confirms aliens landed yesterday.",
-  "image_url": null
-}
+## Setup Ollama
+Make sure you have Ollama running locally with `llama3.1` model installed.
+```bash
+ollama run llama3.1
 ```
 
-```json
-{
-  "final_verdict": "FAKE",
-  "confidence": 0.95,
-  "reasoning": "Trusted fact-checking sources confirm NASA has made no such announcement...",
-  "live_evidence": [...],
-  "trusted_evidence": [...],
-  "source_credibility": [...],
-  "image_verification": null
-}
-```
+## API Documentation
 
-## Status
+- `POST /verify`: Submit a JSON body with `{"article": "...", "image_url": "..."}`
+- `POST /rag/ingest-manual`: Ingest manual articles into ChromaDB.
+- `GET /rag/query`: Test the RAG database.
 
-- [x] Text classification + live search evidence
-- [x] Reverse image matching (perceptual hash against known-image corpus)
-- [x] ChromaDB RAG over trusted fact-check sources
-- [x] LangGraph multi-agent orchestration
-- [x] Frontend dashboard
-- [ ] Parallel agent execution (currently sequential)
-- [ ] Scheduled RSS ingestion job
-- [ ] Kaggle-based reference corpus for style/similarity matching
-
-## Disclaimer
-
-This is a research and demonstration project. It is not a substitute for professional fact-checking, and verdicts should not be treated as authoritative.
+## Project Limitations & Future Scope
+- The NLI model handles short snippets well but could be extended to full-page reasoning.
+- Image verification currently relies on exact hash matching; perceptual embeddings could be used instead.
+- Benchmark evaluations on datasets like LIAR and FakeNewsNet are recommended.
