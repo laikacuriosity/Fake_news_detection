@@ -1,17 +1,50 @@
+from services.utils.logger import logger
+import time
 from services.classifier import classify
 from services.retriever import search_news, search_news_for_claims
 from services.image_search import reverse_image_search
 from rag.ingest import query_trusted_sources
 from services.claim_extraction import extract_claims
-from services.stance_detection import detect_stance
+from services.stance_detection import detect_stance_batch
 from urllib.parse import urlparse
 
-# Multi-factor credibility mapping (Phase 1, #5)
 CREDIBLE_DOMAINS = {
-    "reuters.com": 0.95, "apnews.com": 0.95, "factcheck.org": 0.9,
-    "fullfact.org": 0.9, "bbc.com": 0.85, "who.int": 0.9,
-    "pib.gov.in": 0.85, "wikipedia.org": 0.6,
-    "snopes.com": 0.9
+    # Fact-checking organizations
+    "factcheck.org": 0.95, "fullfact.org": 0.95, "snopes.com": 0.95,
+    "politifact.com": 0.95, "leadstories.com": 0.95, "truthorfiction.com": 0.95,
+    "boomlive.in": 0.95, "altnews.in": 0.95, "checkyourfact.com": 0.95,
+    # Wire services and international agencies
+    "reuters.com": 0.95, "apnews.com": 0.95, "afp.com": 0.95,
+    "bloomberg.com": 0.95, "upi.com": 0.90, "who.int": 0.95,
+    # Major global broadcasters and newspapers
+    "bbc.com": 0.92, "bbc.co.uk": 0.92, "theguardian.com": 0.90,
+    "nytimes.com": 0.92, "washingtonpost.com": 0.90, "wsj.com": 0.92,
+    "ft.com": 0.90, "economist.com": 0.90, "time.com": 0.88,
+    "forbes.com": 0.85, "cnn.com": 0.88, "nbcnews.com": 0.88,
+    "cbsnews.com": 0.88, "abcnews.go.com": 0.88, "npr.org": 0.92,
+    "pbs.org": 0.92, "aljazeera.com": 0.88, "dw.com": 0.90,
+    "france24.com": 0.88, "kyodonews.net": 0.90,
+    # National news outlets
+    "thehindu.com": 0.90, "indianexpress.com": 0.90, "hindustantimes.com": 0.85,
+    "timesofindia.indiatimes.com": 0.85, "ndtv.com": 0.85, "indiatoday.in": 0.85,
+    "news18.com": 0.82, "pib.gov.in": 0.95, "ddnews.gov.in": 0.92,
+    "business-standard.com": 0.88, "livemint.com": 0.88,
+    # Sports federations and reporting
+    "icc-cricket.com": 0.95, "espn.com": 0.90, "espncricinfo.com": 0.92,
+    "cricbuzz.com": 0.90, "fifa.com": 0.95, "olympics.com": 0.95,
+    "uefa.com": 0.95, "nba.com": 0.95,
+    # Science, space, nature, institutions
+    "britannica.com": 0.95, "wikipedia.org": 0.80, "nasa.gov": 0.95,
+    "esa.int": 0.95, "cern.ch": 0.95, "nature.com": 0.95, "science.org": 0.95,
+    "scientificamerican.com": 0.92, "newscientist.com": 0.90, "nationalgeographic.com": 0.90,
+    "smithsonianmag.com": 0.90, "livescience.com": 0.88, "phys.org": 0.88,
+    "space.com": 0.88, "history.com": 0.85, "sciencedirect.com": 0.95,
+    "usgs.gov": 0.95, "noaa.gov": 0.95, "weather.gov": 0.95, "fda.gov": 0.95,
+    "audubon.org": 0.90,
+    # Health and medicine
+    "cdc.gov": 0.95, "nih.gov": 0.95, "un.org": 0.95, "loc.gov": 0.95,
+    "mayoclinic.org": 0.95, "hopkinsmedicine.org": 0.95, "healthline.com": 0.85,
+    "webmd.com": 0.85, "thelancet.com": 0.95, "nejm.org": 0.95, "bmj.com": 0.95
 }
 
 def _get_domain(url: str) -> str:
@@ -19,145 +52,169 @@ def _get_domain(url: str) -> str:
         domain = urlparse(url).netloc.lower()
         if domain.startswith("www."):
             domain = domain[4:]
+        # Handle subdomains like en.wikipedia.org
+        parts = domain.split('.')
+        if len(parts) > 2 and parts[-2] not in ["co", "com", "gov", "org", "net", "ac", "edu"]:
+            domain = ".".join(parts[-2:])
+        elif len(parts) > 2: # e.g. co.uk
+            domain = ".".join(parts[-3:])
         return domain
     except:
         return ""
 
 def claim_extractor_node(state):
     """Extracts factual claims from the article."""
+    t0 = time.time()
     try:
         claims = extract_claims(state["article"])
-        return {"claims": claims}
+        return {"claims": claims, "timing_claim_ext": time.time()-t0}
     except Exception as e:
-        return {"claims": [], "warnings": [f"Claim extraction failed: {str(e)}"]}
+        return {"claims": [], "warnings": [f"Claim extraction failed: {str(e)}"], "timing_claim_ext": time.time()-t0}
 
 def text_verifier_node(state):
-    """Style-based classifier."""
+    t0 = time.time()
     try:
         result = classify(state["article"], title=state.get("title", ""))
-        return {"style_check": result}
+        return {"style_check": result, "timing_text_ver": time.time()-t0}
     except Exception as e:
-        return {"style_check": {"label": "UNVERIFIED", "confidence": 0.0}, "warnings": [f"Classifier failed: {str(e)}"]}
+        return {"style_check": {"label": "UNVERIFIED", "confidence": 0.0}, "warnings": [f"Classifier failed: {str(e)}"], "timing_text_ver": time.time()-t0}
 
 def image_verifier_node(state):
-    """Reverse image search via perceptual hash."""
+    t0 = time.time()
     if not state.get("image_url"):
-        return {"image_result": None}
+        return {"image_result": None, "timing_image_ver": time.time()-t0}
     try:
         result = reverse_image_search(state["image_url"])
-        return {"image_result": result}
+        return {"image_result": result, "timing_image_ver": time.time()-t0}
     except Exception as e:
-        return {"image_result": None, "warnings": [f"Image verification failed: {str(e)}"]}
+        return {"image_result": None, "warnings": [f"Image verification failed: {str(e)}"], "timing_image_ver": time.time()-t0}
 
 def fact_check_retriever_node(state):
-    """Gathers evidence from live web + trusted RAG corpus based on claims."""
+    t0 = time.time()
     claims = state.get("claims", [])
     
     if claims:
         live = search_news_for_claims(claims)
-        
-        # Combine claims for RAG or query individually
         trusted = []
+        seen_urls = set()
         for c in claims:
             try:
                 res = query_trusted_sources(c.get("text", ""))
                 for r in res:
-                    r["claim_id"] = c.get("claim_id")
-                trusted.extend(res)
-            except Exception:
-                pass
+                    u = r.get("url")
+                    if u not in seen_urls:
+                        seen_urls.add(u)
+                        r["claim_id"] = c.get("claim_id")
+                        trusted.append(r)
+            except Exception as e:
+                logger.error(f"An error occurred: {e}", exc_info=True)
     else:
-        # Fallback to older logic but handle failures gracefully
         query = state["article"][:200]
         try:
             live = search_news(query)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Fallback news search failed for query '{query}': {str(e)}", exc_info=True)
             live = []
-            
         try:
             trusted = query_trusted_sources(query)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Fallback trusted source search failed for query '{query}': {str(e)}", exc_info=True)
             trusted = []
 
-    return {"live_evidence": live, "trusted_evidence": trusted}
+    return {"live_evidence": live, "trusted_evidence": trusted, "timing_retriever": time.time()-t0}
 
 def stance_detection_node(state):
-    """Calculates stance (SUPPORTS/CONTRADICTS/NEUTRAL) for each claim and evidence."""
+    """Calculates stance using BATcH NLI for each claim and evidence."""
+    t0 = time.time()
     claims = state.get("claims", [])
-    live_ev = state.get("live_evidence", [])
-    trusted_ev = state.get("trusted_evidence", [])
-    
-    all_evidence = live_ev + trusted_ev
-    stance_results = []
+    all_evidence = state.get("live_evidence", []) + state.get("trusted_evidence", [])
     
     try:
+        pairs = []
+        mapping = [] # to keep track of claim_id and url
+        
         if not claims:
-            # Fallback if no claims: just use the first 200 chars as claim
             main_claim = state["article"][:200]
+            seen_u = set()
             for ev in all_evidence:
-                stance = detect_stance(main_claim, ev.get("snippet", ""))
-                stance_results.append({
-                    "evidence_url": ev.get("url"),
-                    "stance": stance["stance"],
-                    "stance_confidence": stance["confidence"]
-                })
+                u = ev.get("url")
+                if u in seen_u:
+                    continue
+                seen_u.add(u)
+                snippet = ev.get("snippet") or ev.get("content", "")
+                if snippet:
+                    pairs.append((main_claim, snippet, []))
+                    mapping.append((None, u))
         else:
             for c in claims:
                 claim_text = c.get("text", "")
                 claim_id = c.get("claim_id")
+                qualifiers = c.get("qualifiers", [])
                 
-                # Filter evidence for this claim (if we tracked claim_id)
                 relevant_ev = [ev for ev in all_evidence if ev.get("claim_id") == claim_id or "claim_id" not in ev]
-                # Limit to top 5 to avoid long processing
-                for ev in relevant_ev[:5]:
-                    snippet = ev.get("snippet", "")
-                    if not snippet:
+                seen_u = set()
+                for ev in relevant_ev[:30]: # Up to 30 sources per claim for deep live testing
+                    u = ev.get("url")
+                    if u in seen_u:
                         continue
-                    stance = detect_stance(claim_text, snippet)
-                    stance_results.append({
-                        "claim_id": claim_id,
-                        "evidence_url": ev.get("url"),
-                        "stance": stance["stance"],
-                        "stance_confidence": stance["confidence"]
-                    })
+                    seen_u.add(u)
+                    snippet = ev.get("snippet") or ev.get("content", "")
+                    if snippet:
+                        pairs.append((claim_text, snippet, qualifiers))
+                        mapping.append((claim_id, u))
+                        
+        if not pairs:
+            return {"stance_analysis": [], "timing_stance": time.time()-t0}
+            
+        # Batch inference
+        batch_results = detect_stance_batch(pairs)
+        
+        stance_results = []
+        for i, res in enumerate(batch_results):
+            cid, url = mapping[i]
+            stance_results.append({
+                "claim_id": cid,
+                "evidence_url": url,
+                "stance": res["stance"],
+                "stance_confidence": res["confidence"]
+            })
                     
-        return {"stance_analysis": stance_results}
+        return {"stance_analysis": stance_results, "timing_stance": time.time()-t0}
     except Exception as e:
-        return {"stance_analysis": [], "warnings": [f"Stance detection failed: {str(e)}"]}
+        return {"stance_analysis": [], "warnings": [f"Stance detection failed: {str(e)}"], "timing_stance": time.time()-t0}
 
 def source_credibility_node(state):
-    """Scores source credibility safely."""
+    t0 = time.time()
     scored = []
 
     for item in (state.get("trusted_evidence") or []):
         url = item.get("url", "")
         domain = _get_domain(url)
-        domain_score = CREDIBLE_DOMAINS.get(domain, 0.75)  # RAG floor
-        
-        scored.append({
-            "url": url,
-            "title": item.get("title"),
-            "domain": domain,
-            "credibility_score": max(domain_score, 0.75),
-            "origin": "trusted_corpus"
-        })
+        domain_score = CREDIBLE_DOMAINS.get(domain)
+        if domain_score is None:
+            if domain.endswith(".gov") or domain.endswith(".edu") or domain.endswith(".int") or domain.endswith(".org"):
+                domain_score = 0.95
+            else:
+                domain_score = 0.85
+        scored.append({"url": url, "credibility_score": domain_score})
 
     for item in (state.get("live_evidence") or []):
         url = item.get("url", "")
         domain = _get_domain(url)
-        domain_score = CREDIBLE_DOMAINS.get(domain, 0.4)
-        
-        scored.append({
-            "url": url,
-            "title": item.get("title"),
-            "domain": domain,
-            "credibility_score": domain_score,
-            "origin": "live_search"
-        })
+        domain_score = CREDIBLE_DOMAINS.get(domain)
+        if domain_score is None:
+            if any(domain.endswith(tld) for tld in [".gov", ".edu", ".ac.uk", ".gov.in", ".gov.uk", ".mil", ".int"]):
+                domain_score = 0.95
+            elif domain.endswith(".org"):
+                domain_score = 0.85
+            elif any(sub in domain for sub in ["news", "times", "post", "tribune", "chronicle", "herald", "gazette", "daily", "press", "journal", "today", "report", "cric", "sport", "tv", "media"]):
+                domain_score = 0.85
+            else:
+                domain_score = 0.75
+        scored.append({"url": url, "credibility_score": domain_score})
 
     scored.sort(key=lambda x: -x["credibility_score"])
     
-    # Deduplicate by URL
     seen = set()
     deduped = []
     for s in scored:
@@ -165,4 +222,4 @@ def source_credibility_node(state):
             seen.add(s["url"])
             deduped.append(s)
             
-    return {"source_credibility": deduped}
+    return {"source_credibility": deduped, "timing_credibility": time.time()-t0}

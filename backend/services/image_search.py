@@ -5,7 +5,7 @@ from io import BytesIO
 import json
 import os
 
-HASH_DB_PATH = "rag/image_hashes.json"
+HASH_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "rag", "image_hashes.json")
 
 def _load_db():
     if os.path.exists(HASH_DB_PATH):

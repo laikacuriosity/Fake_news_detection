@@ -1,14 +1,30 @@
+from services.utils.logger import logger
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from core.device import get_device
 
 MODEL_NAME = "hamzab/roberta-fake-news-classification"
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
+tokenizer = None
+model = None
+id2label = None
 
-# Use actual config labels instead of hardcoded
-id2label = model.config.id2label
+def _load_model():
+    global tokenizer, model, id2label
+    if model is None:
+        device = get_device()
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, local_files_only=True)
+            model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, local_files_only=True)
+        except Exception:
+            tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+            model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
+        model.to(device)
+        model.eval()
+        id2label = model.config.id2label
 
 def classify(text: str, title: str = ""):
+    _load_model()
+    device = get_device()
     # 7. Fix classifier input formatting: <title> TITLE <content> CONTENT <end>
     if title:
         formatted_text = f"<title> {title} <content> {text} <end>"
@@ -25,13 +41,13 @@ def classify(text: str, title: str = ""):
     
     # Process in chunks of 512
     for i in range(0, len(input_ids), max_len):
-        chunk_input_ids = input_ids[i:i+max_len].unsqueeze(0)
-        chunk_attention_mask = attention_mask[i:i+max_len].unsqueeze(0)
+        chunk_input_ids = input_ids[i:i+max_len].unsqueeze(0).to(device)
+        chunk_attention_mask = attention_mask[i:i+max_len].unsqueeze(0).to(device)
         
-        with torch.no_grad():
+        with torch.inference_mode():
             outputs = model(input_ids=chunk_input_ids, attention_mask=chunk_attention_mask)
             
-        probs = torch.softmax(outputs.logits, dim=1)[0]
+        probs = torch.softmax(outputs.logits, dim=1)[0].cpu()
         chunks_probs.append(probs)
         
     # Aggregate chunks (average pooling over probabilities)

@@ -1,9 +1,11 @@
+from services.utils.logger import logger
+import os
 import chromadb
 from chromadb.utils import embedding_functions
 import feedparser
 import hashlib
 
-CHROMA_PATH = "rag/chroma_db"
+CHROMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chroma_db")
 
 # Trusted fact-check / news RSS feeds
 TRUSTED_FEEDS = {
@@ -13,22 +15,33 @@ TRUSTED_FEEDS = {
     "TruthOrFiction": "https://www.truthorfiction.com/feed/",
 }
 
+from core.device import get_device
+
 _client = chromadb.PersistentClient(path=CHROMA_PATH)
-_embedder = embedding_functions.SentenceTransformerEmbeddingFunction(
-    model_name="all-MiniLM-L6-v2"
-)
+try:
+    _embedder = embedding_functions.SentenceTransformerEmbeddingFunction(
+        model_name="all-MiniLM-L6-v2",
+        device=get_device().type,
+        local_files_only=True
+    )
+except Exception:
+    _embedder = embedding_functions.SentenceTransformerEmbeddingFunction(
+        model_name="all-MiniLM-L6-v2",
+        device=get_device().type
+    )
 
 _collection = _client.get_or_create_collection(
     name="trusted_sources",
     embedding_function=_embedder
 )
 
-def _make_id(url: str) -> str:
-    return hashlib.sha256(url.encode()).hexdigest()[:16]
+def _make_id(url: str, title: str = "") -> str:
+    key = f"{url}::{title}" if title else url
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 def ingest_document(title: str, content: str, url: str, source: str):
     """Add a single trusted document to the vector store."""
-    doc_id = _make_id(url)
+    doc_id = _make_id(url, title)
     _collection.upsert(
         ids=[doc_id],
         documents=[content],
@@ -65,7 +78,7 @@ def ingest_all_feeds():
             results.append({"feed": name, "error": str(e)})
     return results
 
-def query_trusted_sources(query: str, n_results: int = 5, max_distance: float = 0.55):
+def query_trusted_sources(query: str, n_results: int = 2, max_distance: float = 0.38):
     """Query the trusted-source vector DB for relevant fact-checks.
     max_distance filters out weak/irrelevant matches — ChromaDB always
     returns its nearest neighbors even if none are actually relevant."""

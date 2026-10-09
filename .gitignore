@@ -29,3 +29,21 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Environments and Secrets
+venv/
+.env
+__pycache__/
+
+# Backups and Nested Repos
+Backup/
+Satyascan_GitHub_Repo/
+Satyascan_GitHub_Repo_backup/
+
+# Documents and Temp files
+*.docx
+*.pptx
+*.pdf
+temp_docx/
+temp_pptx/
+inspect_pptx/

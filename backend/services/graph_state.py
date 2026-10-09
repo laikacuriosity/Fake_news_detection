@@ -20,7 +20,15 @@ class VerificationState(TypedDict):
     image_result: Optional[Dict[str, Any]]
     
     warnings: Optional[List[str]]
-
+    
+    # Timings
+    timing_claim_ext: Optional[float]
+    timing_text_ver: Optional[float]
+    timing_image_ver: Optional[float]
+    timing_retriever: Optional[float]
+    timing_stance: Optional[float]
+    timing_credibility: Optional[float]
+    timing_aggregator: Optional[float]
     # final output
     final_verdict: Optional[str]
     confidence: Optional[float]
