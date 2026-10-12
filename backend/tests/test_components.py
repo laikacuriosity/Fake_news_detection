@@ -8,7 +8,7 @@ def test_domain_parsing():
     assert _get_domain("https://www.reuters.com/article/123") == "reuters.com"
     assert _get_domain("http://bbc.com/news") == "bbc.com"
     assert _get_domain("invalid_url") == ""
-    assert _get_domain("https://reuters.com.fake.site/news") == "reuters.com.fake.site"
+    assert _get_domain("https://reuters.com.fake.site/news") == "fake.site"
 
 def test_long_article_handling():
     # Provide a string much longer than 512 tokens

@@ -1,4 +1,4 @@
-﻿# Secrets
+# Secrets
 .env
 .env.local
 *.pem
@@ -16,6 +16,8 @@ __pycache__/
 # Vector DB / generated data
 backend/rag/chroma_db/
 rag/image_hashes.json
+backend/evaluation/
+cache.json
 
 # Node
 node_modules/

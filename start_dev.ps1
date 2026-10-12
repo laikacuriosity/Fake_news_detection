@@ -1,6 +1,13 @@
 $ErrorActionPreference = "Stop"
 
-$env:PYTHONPATH = "C:\alethia\backend"
+$ProjectRoot = $PSScriptRoot
+$env:PYTHONPATH = Join-Path $ProjectRoot "backend"
+$PythonPath = Join-Path $ProjectRoot "venv\Scripts\python.exe"
+
+# Fallback to system python if venv python not found
+if (!(Test-Path $PythonPath)) {
+    $PythonPath = "python"
+}
 
 # Clean up any lingering processes on ports 8000 and 3000
 $ports = 8000, 3000
@@ -18,20 +25,23 @@ foreach ($p in $ports) {
 }
 
 # Start the Backend with auto-reload
-Write-Host "Starting Aletheia Backend on port 8000..."
+Write-Host "Starting SatyaScan Backend on port 8000..."
 $BackendArgs = "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"
-$BackendProcess = Start-Process -FilePath "C:\alethia\venv\Scripts\python.exe" -ArgumentList $BackendArgs -WorkingDirectory "C:\alethia\backend" -PassThru -NoNewWindow
+$BackendDir = Join-Path $ProjectRoot "backend"
+$BackendProcess = Start-Process -FilePath $PythonPath -ArgumentList $BackendArgs -WorkingDirectory $BackendDir -PassThru -NoNewWindow
 
 # Start the Frontend
-Write-Host "Starting Frontend on port 3000..."
-$FrontendArgs = "-m", "http.server", "3000", "--directory", "C:\alethia\frontend"
-$FrontendProcess = Start-Process -FilePath "C:\alethia\venv\Scripts\python.exe" -ArgumentList $FrontendArgs -PassThru -NoNewWindow
+Write-Host "Starting SatyaScan Frontend on port 3000..."
+$FrontendDir = Join-Path $ProjectRoot "frontend"
+$FrontendArgs = "-m", "http.server", "3000", "--directory", $FrontendDir
+$FrontendProcess = Start-Process -FilePath $PythonPath -ArgumentList $FrontendArgs -PassThru -NoNewWindow
 
 Write-Host ""
 Write-Host "======================================================"
-Write-Host "ALETHEIA CASE FILE is running!"
+Write-Host "SATYASCAN TRUTH INTELLIGENCE PLATFORM IS RUNNING!"
 Write-Host "Frontend UI: http://localhost:3000"
 Write-Host "Backend API: http://localhost:8000"
+Write-Host "API Docs:    http://localhost:8000/docs"
 Write-Host "Press Ctrl+C to stop the servers."
 Write-Host "======================================================"
 

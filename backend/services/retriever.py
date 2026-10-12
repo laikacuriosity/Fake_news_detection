@@ -12,7 +12,8 @@ import json
 import os
 import re
 
-CACHE_FILE = "C:/alethia/evaluation/cache.json"
+_DEFAULT_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "evaluation")
+CACHE_FILE = os.getenv("CACHE_FILE", os.path.join(_DEFAULT_CACHE_DIR, "cache.json"))
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
@@ -25,6 +26,7 @@ def load_cache():
 
 def save_cache(cache):
     try:
+        os.makedirs(os.path.dirname(os.path.abspath(CACHE_FILE)), exist_ok=True)
         with open(CACHE_FILE, "w") as f:
             json.dump(cache, f)
     except:
@@ -190,7 +192,7 @@ def _search_ddg_single(query_str, max_results=10):
 def _search_wiki_single(query_str, max_results=10):
     try:
         url = 'https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + requests.utils.quote(query_str) + '&utf8=&format=json&srlimit=' + str(max_results)
-        resp = requests.get(url, timeout=5, headers={'User-Agent': 'Aletheia/2.0'}).json()
+        resp = requests.get(url, timeout=5, headers={'User-Agent': 'SatyaScan/2.0'}).json()
         out = []
         for item in resp.get('query', {}).get('search', []):
             clean_snippet = re.sub('<[^<]+>', '', item['snippet'])
