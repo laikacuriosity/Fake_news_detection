@@ -69,4 +69,11 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy", "service": "Satyascan Backend Engine"}
+    from core.device import get_device, get_device_name
+    dev = get_device()
+    return {
+        "status": "healthy",
+        "service": "Satyascan Backend Engine",
+        "device": dev.type.upper(),
+        "gpu": get_device_name()
+    }

@@ -1971,7 +1971,7 @@
           <span class="session-badge-top" id="displaySessionId">SESSION: SES-LOAD</span>
         </div>
         <div class="mono" style="font-size: 11.5px; color: var(--text-muted);" id="deviceIndicator">
-          Engine: PyTorch · CPU
+          Engine: PyTorch · NVIDIA RTX 3050 GPU (CUDA)
         </div>
       </div>
 
@@ -2492,12 +2492,21 @@ function scrollToIntake() {
 async function checkSystemHealth() {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000);
-    const resp = await fetch('http://127.0.0.1:8000/docs', { method: 'HEAD', signal: controller.signal });
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const resp = await fetch('http://127.0.0.1:8000/health', { signal: controller.signal });
     clearTimeout(timeout);
-    if (resp.ok || resp.status < 500) {
+    if (resp.ok) {
+      const data = await resp.json();
       systemDot.style.background = 'var(--verdict-real)';
       systemStatusText.textContent = 'System Online';
+      const devEl = document.getElementById('deviceIndicator');
+      if (devEl) {
+        if (data.gpu && data.gpu !== 'CPU') {
+          devEl.textContent = `Engine: PyTorch · ${data.gpu} (${data.device || 'CUDA'})`;
+        } else if (data.device) {
+          devEl.textContent = `Engine: PyTorch · ${data.device}`;
+        }
+      }
     }
   } catch (e) {
     systemDot.style.background = 'var(--verdict-fake)';
@@ -2758,7 +2767,8 @@ function renderReportDossier(caseObj) {
 
   // Device Indicator
   if (data.hardware) {
-    document.getElementById('deviceIndicator').textContent = `Engine: ${data.hardware.device.toUpperCase()} (${data.hardware.gpu || 'Active'})`;
+    const gpuTitle = data.hardware.gpu || 'NVIDIA RTX 3050 GPU';
+    document.getElementById('deviceIndicator').textContent = `Engine: PyTorch · ${gpuTitle} (${data.hardware.device.toUpperCase()})`;
   }
 }
 
