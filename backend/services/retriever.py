@@ -174,19 +174,13 @@ def _extract_search_queries(text: str) -> list:
         f"{compact_kw} news"
     ]
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type(Exception)
-)
 def _search_ddg_single(query_str, max_results=10):
-    time.sleep(random.uniform(0.1, 0.5))
     try:
-        with DDGS() as dd:
+        with DDGS(timeout=3) as dd:
             return list(dd.text(query_str, max_results=max_results))
     except Exception as e:
-        logger.error(f"DDGS error for query '{query_str}': {e}", exc_info=True)
-        raise e  # Let tenacity retry it
+        logger.warning(f"DDGS error for query '{query_str}': {e}")
+        return []
 
 
 def _search_wiki_single(query_str, max_results=10):
@@ -281,11 +275,11 @@ def search_news_for_claims(claims, max_total_results=30):
             raw_hits = []
             for sf in search_futures:
                 try:
-                    res_list = sf.result(timeout=7)
+                    res_list = sf.result(timeout=3.5)
                     if res_list:
                         raw_hits.extend(res_list)
-                except Exception as e:
-                    logger.error(f"An error occurred: {e}", exc_info=True)
+                except Exception:
+                    pass
             
             # Cache the deep hit list
             if len(raw_hits) >= 8:
@@ -301,13 +295,13 @@ def search_news_for_claims(claims, max_total_results=30):
 
         # Process and resolve final evidence items
         final_results = []
-        for future in as_completed(results, timeout=8):
+        for future in as_completed(results, timeout=4.0):
             try:
-                res = future.result(timeout=1)
+                res = future.result(timeout=0.5)
                 if res is not None and res.get("snippet"):
                     final_results.append(res)
-            except Exception as e:
-                logger.error(f"An error occurred: {e}", exc_info=True)
+            except Exception:
+                pass
                     
     return final_results
 

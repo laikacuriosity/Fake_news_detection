@@ -5,13 +5,23 @@ import time
 
 def aggregator_node(state):
     t0 = time.time()
+    compact_stances = []
+    for s in (state.get("stance_analysis", []) or [])[:5]:
+        compact_stances.append({
+            "claim": str(s.get("claim_text", ""))[:100],
+            "stance": s.get("stance", "NEUTRAL"),
+            "confidence": round(float(s.get("stance_confidence", 0.5)), 2),
+            "source": s.get("source_domain", "") or s.get("source", "")
+        })
+
     structured_context = {
-        "article": state.get("article", ""),
-        "extracted_claims": state.get("claims", []),
-        "classifier_signal": state.get("style_check", {}),
-        "evidence_stances": state.get("stance_analysis", []),
-        "source_credibility": state.get("source_credibility", [])[:5],
-        "warnings": state.get("warnings", [])
+        "article": str(state.get("article", ""))[:300],
+        "extracted_claims": [str(c.get("text", ""))[:120] for c in (state.get("claims", []) or [])[:3]],
+        "evidence_stances": compact_stances,
+        "source_credibility": [
+            {"domain": s.get("domain", ""), "score": s.get("credibility_score", 0.5)}
+            for s in (state.get("source_credibility", []) or [])[:4]
+        ]
     }
     
     prompt = f'''You are a professional fact checker. Respond ONLY with valid JSON, no other text.
@@ -21,12 +31,11 @@ EVIDENCE BLOCK:
 {json.dumps(structured_context, indent=2)}
 
 Your task:
-1. Review the classifier_signal.
-2. Review the extracted_claims and evidence_stances. Do trusted sources CONTRADICT or SUPPORT the claims?
-3. Calculate an overall verdict.
-If major claims are CONTRADICTED by high credibility sources, the verdict is FAKE.
-If major claims are SUPPORTED by high credibility sources, the verdict is REAL.
-If evidence is missing, conflicting without a clear winner, or low credibility, the verdict is UNVERIFIED.
+1. Review the extracted_claims and evidence_stances. Do trusted sources CONTRADICT or SUPPORT the claims?
+2. Calculate an overall verdict:
+If major claims are CONTRADICTED by high credibility sources, verdict is FAKE.
+If major claims are SUPPORTED by high credibility sources, verdict is REAL.
+Otherwise, verdict is UNVERIFIED.
 
 Respond with exactly this JSON structure:
 {{
@@ -36,19 +45,22 @@ Respond with exactly this JSON structure:
 }}
 '''
     try:
-        response = ollama.chat(
+        client = ollama.Client(timeout=5.0)
+        response = client.chat(
             model="llama3.1",
             messages=[{"role": "user", "content": prompt}],
-            format="json"
+            format="json",
+            options={"num_predict": 90, "temperature": 0.1}
         )
         parsed = json.loads(response["message"]["content"])
         final_verdict = parsed.get("verdict", "UNVERIFIED").upper()
         confidence = float(parsed.get("confidence", 0.5))
         reasoning = parsed.get("reasoning", "")
     except Exception as e:
+        logger.warning(f"Ollama reasoning skipped or timed out: {e}")
         final_verdict = "UNVERIFIED"
         confidence = 0.0
-        reasoning = "LLM Parsing Failed."
+        reasoning = ""
 
     # ----- APPLY LOGIC CORRECTIONS BEFORE RETURNING -----
     
@@ -127,7 +139,6 @@ Respond with exactly this JSON structure:
                     c_weight += w
 
             # 3. BALANCED SAFETY NET
-            # Trust the LLM unless the mathematical weights prove it hallucinated!
             if final_verdict == 'REAL':
                 # Only override REAL if the evidence actually heavily contradicts it
                 if c_weight > 0.4 and c_weight > s_weight:
@@ -136,11 +147,25 @@ Respond with exactly this JSON structure:
             elif final_verdict == 'FAKE':
                 # Only override FAKE if there is absolutely no contradiction weight
                 if c_weight < 0.2:
-                    # If it has heavy support, flip to REAL, else UNVERIFIED
                     if s_weight > 0.6:
                         final_verdict = 'REAL'
                     else:
                         final_verdict = 'UNVERIFIED'
+            
+            elif final_verdict == 'UNVERIFIED':
+                if c_weight >= 0.4 and c_weight > s_weight:
+                    final_verdict = 'FAKE'
+                    confidence = round(min(0.96, 0.65 + (c_weight / 3.0)), 2)
+                    if not reasoning:
+                        reasoning = "Cross-referenced evidence from verified authorities contradicts this claim."
+                elif s_weight >= 0.4 and s_weight > c_weight:
+                    final_verdict = 'REAL'
+                    confidence = round(min(0.96, 0.65 + (s_weight / 3.0)), 2)
+                    if not reasoning:
+                        reasoning = "Cross-referenced evidence from verified authorities confirms this claim."
+                else:
+                    if not reasoning:
+                        reasoning = "Insufficient verifiable evidence found across authoritative databases."
 
     return {
         "final_verdict": final_verdict,

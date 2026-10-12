@@ -19,16 +19,18 @@ Return ONLY valid JSON in this format:
 Text: {article_text}"""
 
     try:
-        response = ollama.chat(
+        client = ollama.Client(timeout=4.0)
+        response = client.chat(
             model="llama3.1",
             messages=[{"role": "user", "content": prompt}],
-            format="json"
+            format="json",
+            options={"num_predict": 100, "temperature": 0.1}
         )
         parsed = json.loads(response["message"]["content"])
         if isinstance(parsed, list) and len(parsed) > 0:
             return parsed
     except Exception as e:
-        logger.error(f"An error occurred: {e}", exc_info=True)
+        logger.warning(f"Ollama claim extraction skipped or timed out: {e}")
         
     # FALLBACK: Heuristic Claim Decomposition
     sentences = re.split(r'(?<=[.!?]) +', article_text)

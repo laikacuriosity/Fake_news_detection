@@ -248,7 +248,7 @@ DOCUMENTS = [
     # T49: Swallowing Spiders in Sleep Myth
     ("Swallowing Spiders in Sleep Myth",
      "Humans do not unknowingly swallow eight live spiders a year while sleeping. Spiders have no reason to crawl into a human mouth and deliberately avoid large sleeping organisms.",
-     "https://www.scientificamerican.com/article/fact-or-fiction-people-swallow-8-spiders-a-year-while-sleeping/", "scientificamerican.com")
+     "https://www.scientificamerican.com/article/fact-or-fiction-people-swallow-8-spiders-a-year-while-sleeping/", "scientificamerican.com"),
  # --- ADDED: Global Fact-Checking Organizations ---
     ("Snopes Fact-Checking", "Snopes is the internet's definitive fact-checking resource. It serves as a comprehensive reference for checking the veracity of rumors, urban legends, and misinformation.", "https://www.snopes.com/about/", "snopes.com"),
     ("PolitiFact Truth-O-Meter", "PolitiFact is a nonpartisan fact-checking website that rates the accuracy of claims by elected officials and others on its Truth-O-Meter.", "https://www.politifact.com/about/", "politifact.com"),
@@ -280,7 +280,6 @@ DOCUMENTS = [
     ("MIT", "The Massachusetts Institute of Technology is a private land-grant research university in Cambridge, Massachusetts.", "https://www.mit.edu/about/", "mit.edu"),
 ]
 
-def populate():
 def populate():
     print(f"Populating ChromaDB trusted_sources with {len(DOCUMENTS)} reference records...")
     count = 0
