@@ -34,10 +34,12 @@ async def lifespan(app: FastAPI):
     verify_and_seed_chromadb()
     
     # Global Model Caching for high-concurrency requests
-    logger.info("Loading DeBERTa-v3 cross-encoder into memory...")
+    from core.device import get_device, get_device_name
+    dev = get_device()
+    logger.info(f"Loading DeBERTa-v3 cross-encoder into memory on {dev.type.upper()} ({get_device_name()})...")
     try:
-        state["nli_model"] = CrossEncoder("cross-encoder/nli-deberta-v3-small")
-        logger.info("Model loaded successfully.")
+        state["nli_model"] = CrossEncoder("cross-encoder/nli-deberta-v3-small", device=dev.type)
+        logger.info("Model loaded successfully on GPU.")
     except Exception as e:
         logger.error(f"Failed to load NLI model: {e}")
     yield
