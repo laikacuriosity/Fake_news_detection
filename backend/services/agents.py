@@ -131,7 +131,7 @@ def stance_detection_node(state):
     
     try:
         pairs = []
-        mapping = [] # to keep track of claim_id and url
+        mapping = [] # to keep track of claim_id, url, claim_text, and domain
         
         if not claims:
             main_claim = state["article"][:200]
@@ -144,7 +144,7 @@ def stance_detection_node(state):
                 snippet = ev.get("snippet") or ev.get("content", "")
                 if snippet:
                     pairs.append((main_claim, snippet, []))
-                    mapping.append((None, u))
+                    mapping.append((None, u, main_claim, _get_domain(u)))
         else:
             for c in claims:
                 claim_text = c.get("text", "")
@@ -161,7 +161,7 @@ def stance_detection_node(state):
                     snippet = ev.get("snippet") or ev.get("content", "")
                     if snippet:
                         pairs.append((claim_text, snippet, qualifiers))
-                        mapping.append((claim_id, u))
+                        mapping.append((claim_id, u, claim_text, _get_domain(u)))
                         
         if not pairs:
             return {"stance_analysis": [], "timing_stance": time.time()-t0}
@@ -171,10 +171,13 @@ def stance_detection_node(state):
         
         stance_results = []
         for i, res in enumerate(batch_results):
-            cid, url = mapping[i]
+            cid, url, ctext, dom = mapping[i]
             stance_results.append({
                 "claim_id": cid,
+                "claim_text": ctext,
                 "evidence_url": url,
+                "source_domain": dom,
+                "domain": dom,
                 "stance": res["stance"],
                 "stance_confidence": res["confidence"]
             })
@@ -196,7 +199,7 @@ def source_credibility_node(state):
                 domain_score = 0.95
             else:
                 domain_score = 0.85
-        scored.append({"url": url, "credibility_score": domain_score})
+        scored.append({"url": url, "domain": domain, "credibility_score": domain_score})
 
     for item in (state.get("live_evidence") or []):
         url = item.get("url", "")
@@ -208,10 +211,10 @@ def source_credibility_node(state):
             elif domain.endswith(".org"):
                 domain_score = 0.85
             elif any(sub in domain for sub in ["news", "times", "post", "tribune", "chronicle", "herald", "gazette", "daily", "press", "journal", "today", "report", "cric", "sport", "tv", "media"]):
-                domain_score = 0.85
+                domain_score = 0.70
             else:
-                domain_score = 0.75
-        scored.append({"url": url, "credibility_score": domain_score})
+                domain_score = 0.40
+        scored.append({"url": url, "domain": domain, "credibility_score": domain_score})
 
     scored.sort(key=lambda x: -x["credibility_score"])
     

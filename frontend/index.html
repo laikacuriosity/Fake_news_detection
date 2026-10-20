@@ -2493,7 +2493,16 @@ async function checkSystemHealth() {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2500);
-    const resp = await fetch('http://127.0.0.1:8000/health', { signal: controller.signal });
+    const healthUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? 'http://127.0.0.1:8000/health'
+      : `${window.location.origin}/health`;
+    
+    let resp;
+    try {
+      resp = await fetch(healthUrl, { signal: controller.signal });
+    } catch (e) {
+      resp = await fetch('http://localhost:8000/health', { signal: controller.signal });
+    }
     clearTimeout(timeout);
     if (resp.ok) {
       const data = await resp.json();
@@ -2522,6 +2531,11 @@ async function executeVerification() {
   if (!article) {
     alert('Please enter an article, news dispatch, or proposition to verify.');
     claimTextInput.focus();
+    return;
+  }
+
+  if (article.length > 10000) {
+    alert('The submitted article exceeds the maximum supported length (10,000 characters). Please condense the text for accurate verification.');
     return;
   }
 
@@ -2811,8 +2825,18 @@ function saveToHistory(caseObj) {
     fullData: caseObj
   });
 
-  if (hist.length > 50) hist = hist.slice(0, 50);
-  localStorage.setItem('Satyascan_case_history', JSON.stringify(hist));
+  if (hist.length > 40) hist = hist.slice(0, 40);
+  try {
+    localStorage.setItem('Satyascan_case_history', JSON.stringify(hist));
+  } catch (quotaErr) {
+    try {
+      // If quota exceeded, trim older entries and retry
+      hist = hist.slice(0, 15);
+      localStorage.setItem('Satyascan_case_history', JSON.stringify(hist));
+    } catch (e) {
+      console.warn('LocalStorage quota reached; older history skipped.');
+    }
+  }
   renderHistory();
 }
 

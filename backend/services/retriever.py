@@ -1,7 +1,6 @@
 from services.utils.logger import logger
 from ddgs import DDGS
 import random
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from urllib.parse import urlparse
 import time
 import requests
@@ -11,9 +10,11 @@ import hashlib
 import json
 import os
 import re
+import threading
 
 _DEFAULT_CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "evaluation")
 CACHE_FILE = os.getenv("CACHE_FILE", os.path.join(_DEFAULT_CACHE_DIR, "cache.json"))
+_cache_lock = threading.Lock()
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
@@ -25,24 +26,27 @@ def load_cache():
     return {}
 
 def save_cache(cache):
-    try:
-        os.makedirs(os.path.dirname(os.path.abspath(CACHE_FILE)), exist_ok=True)
-        with open(CACHE_FILE, "w") as f:
-            json.dump(cache, f)
-    except:
-        pass
+    with _cache_lock:
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(CACHE_FILE)), exist_ok=True)
+            with open(CACHE_FILE, "w") as f:
+                json.dump(cache, f)
+        except:
+            pass
 
 _cache = load_cache()
 
 def get_cache(key):
-    val = _cache.get(key)
+    with _cache_lock:
+        val = _cache.get(key)
     # If cache has fewer than 8 results, treat as miss to allow deep live search
     if isinstance(val, list) and len(val) < 8:
         return None
     return val
 
 def set_cache(key, value):
-    _cache[key] = value
+    with _cache_lock:
+        _cache[key] = value
     save_cache(_cache)
 
 def _fetch_page_content(url):

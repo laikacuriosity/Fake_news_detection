@@ -6,12 +6,20 @@ import time
 def aggregator_node(state):
     t0 = time.time()
     compact_stances = []
+    claims_list = state.get("claims", []) or []
     for s in (state.get("stance_analysis", []) or [])[:5]:
+        claim_str = s.get("claim_text")
+        if not claim_str:
+            cid = s.get("claim_id")
+            for c in claims_list:
+                if c.get("claim_id") == cid:
+                    claim_str = c.get("text", "")
+                    break
         compact_stances.append({
-            "claim": str(s.get("claim_text", ""))[:100],
+            "claim": str(claim_str or state.get("article", ""))[:120],
             "stance": s.get("stance", "NEUTRAL"),
             "confidence": round(float(s.get("stance_confidence", 0.5)), 2),
-            "source": s.get("source_domain", "") or s.get("source", "")
+            "source": s.get("source_domain", "") or s.get("domain", "") or s.get("source", "")
         })
 
     structured_context = {
@@ -19,7 +27,7 @@ def aggregator_node(state):
         "extracted_claims": [str(c.get("text", ""))[:120] for c in (state.get("claims", []) or [])[:3]],
         "evidence_stances": compact_stances,
         "source_credibility": [
-            {"domain": s.get("domain", ""), "score": s.get("credibility_score", 0.5)}
+            {"domain": s.get("domain", "") or s.get("url", ""), "score": s.get("credibility_score", 0.5)}
             for s in (state.get("source_credibility", []) or [])[:4]
         ]
     }

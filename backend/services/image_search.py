@@ -8,14 +8,21 @@ import os
 HASH_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "rag", "image_hashes.json")
 
 def _load_db():
-    if os.path.exists(HASH_DB_PATH):
-        with open(HASH_DB_PATH) as f:
-            return json.load(f)
+    try:
+        if os.path.exists(HASH_DB_PATH):
+            with open(HASH_DB_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        return {}
     return {}
 
 def _save_db(db):
-    with open(HASH_DB_PATH, "w") as f:
-        json.dump(db, f, indent=2)
+    try:
+        os.makedirs(os.path.dirname(HASH_DB_PATH), exist_ok=True)
+        with open(HASH_DB_PATH, "w", encoding="utf-8") as f:
+            json.dump(db, f, indent=2)
+    except Exception:
+        pass
 
 def _get_image(image_url):
     resp = requests.get(image_url, timeout=10, headers={

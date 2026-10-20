@@ -31,30 +31,29 @@ def classify(text: str, title: str = ""):
     else:
         formatted_text = f"<title> Unknown <content> {text} <end>"
 
-    # 6. Add long-document chunking
-    tokens = tokenizer(formatted_text, add_special_tokens=True, return_tensors="pt")
-    input_ids = tokens["input_ids"][0]
-    attention_mask = tokens["attention_mask"][0]
+    # Add long-document chunking with special token preservation
+    encodings = tokenizer(
+        formatted_text,
+        max_length=512,
+        truncation=True,
+        return_overflowing_tokens=True,
+        stride=128,
+        padding=True,
+        return_tensors="pt"
+    )
     
-    max_len = 512
-    chunks_probs = []
+    input_ids = encodings["input_ids"].to(device)
+    attention_mask = encodings["attention_mask"].to(device)
     
-    # Process in chunks of 512
-    for i in range(0, len(input_ids), max_len):
-        chunk_input_ids = input_ids[i:i+max_len].unsqueeze(0).to(device)
-        chunk_attention_mask = attention_mask[i:i+max_len].unsqueeze(0).to(device)
-        
-        with torch.inference_mode():
-            outputs = model(input_ids=chunk_input_ids, attention_mask=chunk_attention_mask)
-            
-        probs = torch.softmax(outputs.logits, dim=1)[0].cpu()
-        chunks_probs.append(probs)
+    with torch.inference_mode():
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+        probs = torch.softmax(outputs.logits, dim=1).cpu()
         
     # Aggregate chunks (average pooling over probabilities)
-    if not chunks_probs:
+    if probs.shape[0] == 0:
         return {"label": "UNVERIFIED", "confidence": 0.0}
         
-    avg_probs = torch.stack(chunks_probs).mean(dim=0)
+    avg_probs = probs.mean(dim=0)
     confidence, prediction_idx = torch.max(avg_probs, dim=0)
     
     return {

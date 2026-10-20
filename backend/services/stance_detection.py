@@ -66,7 +66,8 @@ def check_relevance(claim_text, evidence_text, qualifiers=None):
         return "LOW_RELEVANCE"
     c_words = extract_content_words(claim_text)
     e_words = extract_content_words(evidence_text)
-    if len(c_words.intersection(e_words)) < 3:
+    min_required = min(2, len(c_words))
+    if len(c_words.intersection(e_words)) < min_required:
         return "LOW_RELEVANCE"
     return "HIGH_RELEVANCE"
 
