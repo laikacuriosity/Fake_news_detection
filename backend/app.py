@@ -45,24 +45,21 @@ async def lifespan(app: FastAPI):
     yield
     state.clear()
 
-app = FastAPI(title="Satyascan Truth Intelligence System", version="2.0", lifespan=lifespan)
-
-frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000,http://127.0.0.1:3000")
-allowed_origins = [origin.strip() for origin in frontend_origin.split(",") if origin.strip()]
+app = FastAPI(title="SatyaScan Truth Intelligence System", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(router)
 
 @app.get("/")
 def root():
-    return {"status": "online", "service": "Satyascan Truth Intelligence API", "version": "2.0", "docs": "/docs"}
+    return {"status": "online", "service": "SatyaScan Truth Intelligence API", "version": "1.0.0", "docs": "/docs"}
 
 @app.get("/health")
 def health():
@@ -70,7 +67,8 @@ def health():
     dev = get_device()
     return {
         "status": "healthy",
-        "service": "Satyascan Backend Engine",
+        "service": "SatyaScan Backend Engine",
+        "version": "1.0.0",
         "device": dev.type.upper(),
         "gpu": get_device_name()
     }

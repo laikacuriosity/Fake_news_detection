@@ -190,7 +190,7 @@ def _search_ddg_single(query_str, max_results=10):
 def _search_wiki_single(query_str, max_results=10):
     try:
         url = 'https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=' + requests.utils.quote(query_str) + '&utf8=&format=json&srlimit=' + str(max_results)
-        resp = requests.get(url, timeout=5, headers={'User-Agent': 'SatyaScan/2.0'}).json()
+        resp = requests.get(url, timeout=5, headers={'User-Agent': 'SatyaScan/1.0.0'}).json()
         out = []
         for item in resp.get('query', {}).get('search', []):
             clean_snippet = re.sub('<[^<]+>', '', item['snippet'])

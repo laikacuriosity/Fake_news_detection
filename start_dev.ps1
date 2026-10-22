@@ -9,8 +9,8 @@ if (!(Test-Path $PythonPath)) {
     $PythonPath = "python"
 }
 
-# Clean up any lingering processes on ports 8000 and 3000
-$ports = 8000, 3000
+# Clean up any lingering processes on ports 8008 and 3000
+$ports = 8008, 3000
 foreach ($p in $ports) {
     $conns = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue
     if ($conns) {
@@ -25,8 +25,8 @@ foreach ($p in $ports) {
 }
 
 # Start the Backend with auto-reload
-Write-Host "Starting SatyaScan Backend on port 8000..."
-$BackendArgs = "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"
+Write-Host "Starting SatyaScan Backend on port 8008..."
+$BackendArgs = "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8008", "--reload"
 $BackendDir = Join-Path $ProjectRoot "backend"
 $BackendProcess = Start-Process -FilePath $PythonPath -ArgumentList $BackendArgs -WorkingDirectory $BackendDir -PassThru -NoNewWindow
 
@@ -40,8 +40,8 @@ Write-Host ""
 Write-Host "======================================================"
 Write-Host "SATYASCAN TRUTH INTELLIGENCE PLATFORM IS RUNNING!"
 Write-Host "Frontend UI: http://localhost:3000"
-Write-Host "Backend API: http://localhost:8000"
-Write-Host "API Docs:    http://localhost:8000/docs"
+Write-Host "Backend API: http://localhost:8008"
+Write-Host "API Docs:    http://localhost:8008/docs"
 Write-Host "Press Ctrl+C to stop the servers."
 Write-Host "======================================================"
 

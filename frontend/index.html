@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-<title>SATYASCAN - Autonomous Fact-Checking & Deep Intelligence Platform</title>
+<title>SatyaScan - Autonomous Fact-Checking & Deep Intelligence Platform</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230A84FF'/%3E%3Ctext x='50' y='72' font-family='system-ui, sans-serif' font-weight='900' font-size='65' fill='black' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1924,7 +1924,7 @@
     </h1>
 
     <p class="hero-subtitle">
-      Satyascan combines DeBERTa-v3 cross-encoder natural language inference, ChromaDB vector archives, and real-time multi-stream live internet retrieval to detect disinformation and authenticate breaking claims with mathematical certainty.
+      SatyaScan combines DeBERTa-v3 cross-encoder natural language inference, ChromaDB vector archives, and real-time multi-stream live internet retrieval to detect disinformation and authenticate breaking claims with mathematical certainty.
     </p>
 
     <div class="hero-cta-group">
@@ -2221,9 +2221,9 @@
        ======================================================================== -->
   <section id="methodology" class="methodology-section container fade-in-up">
     <div class="section-tagline">The Process</div>
-    <h2 class="section-heading">How Satyascan Determines Truth</h2>
+    <h2 class="section-heading">How SatyaScan Determines Truth</h2>
     <p class="section-desc">
-      Satyascan operates an autonomous multi-signal verification pipeline engineered to neutralize misinformation without human editorial latency.
+      SatyaScan operates an autonomous multi-signal verification pipeline engineered to neutralize misinformation without human editorial latency.
     </p>
 
     <div class="architecture-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
@@ -2300,7 +2300,7 @@
       <div class="footer-brand">
         <div class="brand-group">
           <div class="brand-logo-icon" style="width: 28px; height: 28px; font-size: 15px;">S</div>
-          <div class="brand-name" style="font-size: 18px;">Satyascan</div>
+          <div class="brand-name" style="font-size: 18px;">SatyaScan</div>
         </div>
         <p class="footer-desc">
           An Autonomous Multi-Signal Truth Intelligence System designed to combat misinformation using advanced Cross-Encoder Natural Language Inference and high-concurrency evidence retrieval.
@@ -2331,7 +2331,7 @@
     </div>
     
     <div class="footer-bottom">
-      <div>&copy; 2026 Satyascan Truth Verification Platform. All rights reserved.</div>
+      <div>&copy; 2026 SatyaScan Truth Verification Platform. All rights reserved.</div>
       <div>VMRF / AVIT Academic Project</div>
     </div>
   </div>
@@ -2339,24 +2339,24 @@
 
 <script>
 /* ==========================================================================
-   Satyascan CLIENT-SIDE APPLICATION LOGIC
+   SatyaScan CLIENT-SIDE APPLICATION LOGIC
    ========================================================================== */
 const API_URL_PRIMARY = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:8000/verify'
+  ? 'http://127.0.0.1:8008/verify'
   : `${window.location.origin}/verify`;
-const API_URL_FALLBACK = 'http://127.0.0.1:8000/verify';
+const API_URL_FALLBACK = 'http://localhost:8008/verify';
 
-let currentCaseNum = parseInt(localStorage.getItem('Satyascan_case_counter') || '211', 10);
+let currentCaseNum = parseInt(localStorage.getItem('SatyaScan_case_counter') || localStorage.getItem('Satyascan_case_counter') || '211', 10);
 let activeCaseDossier = null;
 let currentFilterVerdict = 'ALL';
 let currentSearchTerm = '';
 
 // Session Identification
 function getOrCreateSessionId() {
-  let sid = localStorage.getItem('Satyascan_session_id');
+  let sid = localStorage.getItem('SatyaScan_session_id') || localStorage.getItem('Satyascan_session_id');
   if (!sid) {
     sid = 'SES-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-    localStorage.setItem('Satyascan_session_id', sid);
+    localStorage.setItem('SatyaScan_session_id', sid);
   }
   return sid;
 }
@@ -2423,7 +2423,7 @@ function formatCaseNum(num) {
 
 // Theme Switcher (Dark / Light)
 function initTheme() {
-  const saved = localStorage.getItem('Satyascan_theme') || 'dark';
+  const saved = localStorage.getItem('SatyaScan_theme') || localStorage.getItem('Satyascan_theme') || 'dark';
   applyTheme(saved);
 }
 
@@ -2435,7 +2435,7 @@ function toggleTheme() {
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('Satyascan_theme', theme);
+  localStorage.setItem('SatyaScan_theme', theme);
   if (theme === 'dark') {
     themeIcon.textContent = '☀️';
     themeLabel.textContent = 'Light';
@@ -2494,14 +2494,14 @@ async function checkSystemHealth() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2500);
     const healthUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://127.0.0.1:8000/health'
+      ? 'http://127.0.0.1:8008/health'
       : `${window.location.origin}/health`;
     
     let resp;
     try {
       resp = await fetch(healthUrl, { signal: controller.signal });
     } catch (e) {
-      resp = await fetch('http://localhost:8000/health', { signal: controller.signal });
+      resp = await fetch('http://localhost:8008/health', { signal: controller.signal });
     }
     clearTimeout(timeout);
     if (resp.ok) {
@@ -2547,7 +2547,7 @@ async function executeVerification() {
   liveProcessBanner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   currentCaseNum++;
-  localStorage.setItem('Satyascan_case_counter', currentCaseNum.toString());
+  localStorage.setItem('SatyaScan_case_counter', currentCaseNum.toString());
   displayCaseId.textContent = formatCaseNum(currentCaseNum);
 
   const startTime = Date.now();
@@ -2616,7 +2616,7 @@ async function executeVerification() {
   } catch (err) {
     clearInterval(timerInterval);
     liveProcessBanner.style.display = 'none';
-    alert(`Verification failed: ${err.message}\nMake sure the backend is active on http://localhost:8000.`);
+    alert(`Verification failed: ${err.message}\nMake sure the backend is active on http://127.0.0.1:8008.`);
   } finally {
     runVerifyBtn.disabled = false;
     runVerifyBtn.innerHTML = '<span>Analyze & Verify Claim</span><span>→</span>';
@@ -2804,7 +2804,7 @@ function toggleReadMore() {
 // ============================================================================
 function getHistory() {
   try {
-    return JSON.parse(localStorage.getItem('Satyascan_case_history') || '[]');
+    return JSON.parse(localStorage.getItem('SatyaScan_case_history') || localStorage.getItem('Satyascan_case_history') || '[]');
   } catch (e) {
     return [];
   }
@@ -2827,12 +2827,12 @@ function saveToHistory(caseObj) {
 
   if (hist.length > 40) hist = hist.slice(0, 40);
   try {
-    localStorage.setItem('Satyascan_case_history', JSON.stringify(hist));
+    localStorage.setItem('SatyaScan_case_history', JSON.stringify(hist));
   } catch (quotaErr) {
     try {
       // If quota exceeded, trim older entries and retry
       hist = hist.slice(0, 15);
-      localStorage.setItem('Satyascan_case_history', JSON.stringify(hist));
+      localStorage.setItem('SatyaScan_case_history', JSON.stringify(hist));
     } catch (e) {
       console.warn('LocalStorage quota reached; older history skipped.');
     }
@@ -2958,7 +2958,7 @@ function loadHistoricalCase(caseId) {
 function deleteSingleHistoryItem(caseId) {
   let hist = getHistory();
   hist = hist.filter(h => h.caseId !== caseId);
-  localStorage.setItem('Satyascan_case_history', JSON.stringify(hist));
+  localStorage.setItem('SatyaScan_case_history', JSON.stringify(hist));
   renderHistory();
 }
 
@@ -2969,6 +2969,7 @@ function confirmClearAllHistory() {
     return;
   }
   if (confirm(`Are you sure you want to delete all ${hist.length} stored case dossiers? This cannot be undone.`)) {
+    localStorage.removeItem('SatyaScan_case_history');
     localStorage.removeItem('Satyascan_case_history');
     renderHistory();
   }
@@ -2982,7 +2983,7 @@ function downloadSingleHistoryReport(caseId) {
   const d = found.fullData.data;
   const lines = [
     "===========================================================",
-    "               Satyascan INTELLIGENCE DOSSIER               ",
+    "               SatyaScan INTELLIGENCE DOSSIER               ",
     "===========================================================",
     `Case Identifier: ${found.caseId}`,
     `Session ID:      ${found.sessionId || clientSessionId}`,
@@ -3004,7 +3005,7 @@ function downloadSingleHistoryReport(caseId) {
   const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `Satyascan_${found.caseId.replace('#', '')}_Report.txt`;
+  a.download = `SatyaScan_${found.caseId.replace('#', '')}_Report.txt`;
   a.click();
 }
 
@@ -3022,7 +3023,7 @@ function openPrintModal() {
   const content = document.getElementById('modalReportContent');
 
   content.innerHTML = `
-    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--diamond-blue); margin-bottom:8px;">Satyascan OFFICIAL CASE DOSSIER · SESSION: ${clientSessionId}</div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--diamond-blue); margin-bottom:8px;">SatyaScan OFFICIAL CASE DOSSIER · SESSION: ${clientSessionId}</div>
     <h2 style="font-size:24px; font-weight:800; margin-bottom:12px;">${escapeHtml(activeCaseDossier.caseId)} · Verification Summary</h2>
     <div style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Issued on ${new Date(activeCaseDossier.timestamp).toLocaleString()} · Latency: ${(d.processing_time_ms/1000).toFixed(2)}s</div>
     
@@ -3061,7 +3062,7 @@ function closePrintModal() {
 function copyReportText() {
   if (!activeCaseDossier) return;
   const d = activeCaseDossier.data;
-  const text = `Satyascan VERIFICATION DOSSIER
+  const text = `SatyaScan VERIFICATION DOSSIER
 Case ID: ${activeCaseDossier.caseId}
 Session: ${clientSessionId}
 Timestamp: ${activeCaseDossier.timestamp}
@@ -3069,7 +3070,7 @@ Verdict: ${d.final_verdict} (${Math.round(d.confidence * 100)}% Confidence)
 Reasoning: ${d.reasoning}
 Claim: "${activeCaseDossier.article}"
 Total Evidence Sources: ${(d.trusted_evidence||[]).length + (d.live_evidence||[]).length}
-Platform: Satyascan Autonomous Truth Intelligence Engine`;
+Platform: SatyaScan Autonomous Truth Intelligence Engine`;
 
   navigator.clipboard.writeText(text).then(() => {
     alert('Case report copied to clipboard!');

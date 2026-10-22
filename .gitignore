@@ -39,7 +39,9 @@ __pycache__/
 
 # Backups and Nested Repos
 Backup/
+SatyaScan_GitHub_Repo/
 Satyascan_GitHub_Repo/
+SatyaScan_GitHub_Repo_backup/
 Satyascan_GitHub_Repo_backup/
 
 # Documents and Temp files

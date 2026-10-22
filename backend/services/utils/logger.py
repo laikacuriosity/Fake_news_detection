@@ -9,4 +9,4 @@ logging.basicConfig(
     ]
 )
 
-logger = logging.getLogger("satyascan")
+logger = logging.getLogger("SatyaScan")
